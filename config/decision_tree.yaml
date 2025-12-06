@@ -1,0 +1,69 @@
+tree:
+  name: "Healthcare Call Processing"
+  start_node: "node1"
+  nodes:
+    node1:
+      type: "sql"
+      name: "Load Call Metadata"
+      node_config:
+        output_key: "call_metadata"
+      next_node: "node2"
+    
+    node2:
+      type: "stt"
+      name: "Speech to Text"
+      node_config:
+        input_key: "audio_file"
+        output_key: "transcribed_text"
+      next_node: "node3"
+    
+    node3:
+      type: "deidentify"
+      name: "De-identify Text"
+      node_config:
+        input_key: "transcribed_text"
+        output_key: "deidentified_text"
+      next_node: "node4"
+    
+    node4:
+      type: "llm"
+      name: "Check Home Visit Need"
+      node_config:
+        prompt: "Analyze the following healthcare call transcript and determine if a home visit is needed. Respond with 'yes', 'no', or 'unclear'."
+        input_key: "deidentified_text"
+        output_key: "home_visit_recommendation"
+      next_node: "node5"
+    
+    node5:
+      type: "condition"
+      name: "Home Visit Decision"
+      node_config:
+        condition_key: "home_visit_recommendation"
+        condition_value: "yes"
+        true_node: "node6"
+        false_node: "node7"
+    
+    node6:
+      type: "llm"
+      name: "Generate Care Plan Updates"
+      node_config:
+        prompt: "Based on the healthcare call transcript, generate detailed care plan updates and recommendations for the patient."
+        input_key: "deidentified_text"
+        output_key: "care_plan_updates"
+      next_node: "node8"
+    
+    node7:
+      type: "llm"
+      name: "Extract Sentiment"
+      node_config:
+        prompt: "Analyze the sentiment of the following healthcare call transcript. Respond with 'positive', 'neutral', or 'negative'."
+        input_key: "deidentified_text"
+        output_key: "sentiment"
+      next_node: "node8"
+    
+    node8:
+      type: "exit"
+      name: "Complete Processing"
+      node_config:
+        status: "success"
+
