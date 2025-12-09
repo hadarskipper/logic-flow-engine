@@ -39,3 +39,13 @@ class LogFileResponse(BaseModel):
     file_size_bytes: int
     last_modified: str
 
+
+class ResultResponse(BaseModel):
+    """Response model for get-result endpoint."""
+    
+    call_id: str
+    commit_sha: str
+    result_file_path: str
+    result: Dict[str, Any]
+    file_size_bytes: int
+    last_modified: str

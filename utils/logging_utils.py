@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 @contextmanager
-def call_logging_context(call_id: str, commit_sha: Optional[str] = None, logs_dir: Optional[Path] = None):
+def call_logging_context(call_id: str, job_submission_datetime: datetime, commit_sha: str, logs_dir: Optional[Path] = None):
     """
     Context manager for setting up per-call logging.
     
@@ -19,7 +19,8 @@ def call_logging_context(call_id: str, commit_sha: Optional[str] = None, logs_di
     
     Args:
         call_id: Call identifier
-        commit_sha: Optional commit SHA to include in filename
+        job_submission_datetime: Datetime when the job was submitted
+        commit_sha: Commit SHA to include in filename
         logs_dir: Directory for log files (defaults to logs/ in project root)
         
     Yields:
@@ -31,15 +32,13 @@ def call_logging_context(call_id: str, commit_sha: Optional[str] = None, logs_di
     logs_dir.mkdir(exist_ok=True)
     
     # Create log filename with call_id, commit_sha, and datetime
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # Use job_submission_datetime for the timestamp
+    timestamp = job_submission_datetime.strftime("%Y%m%d_%H%M%S")
     # Sanitize call_id for filename (remove invalid characters)
     safe_call_id = "".join(c for c in call_id if c.isalnum() or c in ("-", "_"))[:50]
     # Sanitize commit_sha for filename (use first 8 characters, remove invalid characters)
-    if commit_sha:
-        safe_commit_sha = "".join(c for c in commit_sha if c.isalnum())[:8]
-        log_filename = f"call_{safe_call_id}_{safe_commit_sha}_{timestamp}.log"
-    else:
-        log_filename = f"call_{safe_call_id}_{timestamp}.log"
+    safe_commit_sha = "".join(c for c in commit_sha if c.isalnum())[:8]
+    log_filename = f"call_{safe_call_id}_{safe_commit_sha}_{timestamp}.log"
     log_filepath = logs_dir / log_filename
     
     # Create file handler for this call
@@ -54,13 +53,15 @@ def call_logging_context(call_id: str, commit_sha: Optional[str] = None, logs_di
     root_logger.addHandler(file_handler)
     
     try:
-        commit_info = f", commit_sha: {commit_sha}" if commit_sha else ""
-        root_logger.info(f"Started logging for call_id: {call_id}{commit_info} to file: {log_filepath}")
+        commit_info = f", commit_sha: {commit_sha}"
+        job_submission_info = f", job_submission_datetime: {job_submission_datetime.isoformat()}"
+        root_logger.info(f"Started logging for call_id: {call_id}{commit_info}{job_submission_info} to file: {log_filepath}")
         yield log_filepath
     finally:
         # Log completion before removing handler
-        commit_info = f", commit_sha: {commit_sha}" if commit_sha else ""
-        root_logger.info(f"Completed logging for call_id: {call_id}{commit_info}")
+        commit_info = f", commit_sha: {commit_sha}"
+        job_submission_info = f", job_submission_datetime: {job_submission_datetime.isoformat()}"
+        root_logger.info(f"Completed logging for call_id: {call_id}{commit_info}{job_submission_info}")
         # Remove handler and close file
         root_logger.removeHandler(file_handler)
         file_handler.close()
